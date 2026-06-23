@@ -17,6 +17,7 @@ class Zone(BaseModel):
     colour: str = Field(default='white')
     zone_type: ZoneType = Field(default=ZoneType.NORMAL)
     max_drones: int = Field(default=1)
+    # start_hub or end_hub
     hub_type: str
 
 
