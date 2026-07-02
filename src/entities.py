@@ -14,9 +14,9 @@ class Zone(BaseModel):
     name: str
     x: int
     y: int
-    colour: str = Field(default='white')
-    zone_type: ZoneType = Field(default=ZoneType.NORMAL)
-    max_drones: int = Field(default=1)
+    colour: str
+    zone_type: str
+    max_drones: int
     # start_hub or end_hub
     hub_type: str
 
@@ -24,7 +24,7 @@ class Zone(BaseModel):
 class Connection(BaseModel):
     zone_a: str
     zone_b: str
-    max_capacity: int = Field(default=1)
+    max_capacity: int
 
 
 class Graph:
@@ -36,6 +36,9 @@ class Graph:
         # start and end zone
         self.start_hub: Optional[Zone] = None
         self.end_hub: Optional[Zone] = None
+
+    def __str__(self) -> str:
+        return f"Zones: {self.zones}\n\nConnections: {self.connections_list}\n"
 
     def add_zone(self, zone: Zone) -> None:
         self.zones[zone.name] = zone

@@ -1,4 +1,6 @@
-with open('test_file.txt', 'r') as f:
-    for line in f:
-        line = line.split('#')[0].strip()
-        print(line)
+from src import MapParser
+
+parser = MapParser()
+
+nb_drones, graph = parser.parse("02_circular_loop.txt")
+print(f"Drones: {nb_drones}\n Graph:\n {graph}")
