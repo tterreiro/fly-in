@@ -3,4 +3,5 @@ from .map_parsing import MapParser
 from . drone_routing import DroneRouter
 
 
-__all__ = ["MapParser", "Graph", "DroneRouter", "Zone", "ZoneType", "Connection"]
+__all__ = ["MapParser", "Graph", "DroneRouter", "Zone", "ZoneType",
+           "Connection"]

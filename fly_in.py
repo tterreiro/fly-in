@@ -13,7 +13,7 @@ def flyin() -> None:
 
         nb_drones, graph = parser.parse(sys.argv[1])
 
-        drone_router = DroneRouter
+        drone_router = DroneRouter()
 
     except Exception as e:
         print("Error:", e)

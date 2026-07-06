@@ -3,6 +3,7 @@
 # ---- FINISH METADATA CHECKING ---
 
 from src import Graph, ZoneType, Zone, Connection
+from typing import Union
 
 
 class ParsingError(Exception):
@@ -40,7 +41,7 @@ class MapParser:
         return metadata
 
     @staticmethod
-    def parse(input_file: str) -> tuple[int, Graph]:  # (nb_drones, graph)
+    def parse(input_file: str) -> tuple[int | str, Graph]:  # (nb_drone, graph)
         """Parse configuration file and validate map settings."""
         graph = Graph()
         raw_zones: list[str] = []
@@ -49,7 +50,7 @@ class MapParser:
         is_first_line = True
         nb_start_hub = 0
         nb_end_hub = 0
-        nb_drones = 1
+        nb_drone: Union[int, str] = 1
         with open(input_file, "r") as f:
             for line_num, line in enumerate(f, 1):
                 clean_line = line.split('#')[0].strip().lower()
@@ -57,19 +58,18 @@ class MapParser:
                     continue
                 if is_first_line:
                     try:
-                        if clean_line.startswith("nb_drones"):
-                            nb_drones = clean_line.split(':', 1)[1].strip()
-                            nb_drones = int(nb_drones)
-                            if nb_drones < 1:
+                        if clean_line.startswith("nb_drone"):
+                            nb_drone = int(clean_line.split(':', 1)[1].strip())
+                            if nb_drone < 1:
                                 raise ParsingError(
                                     "Number of drones must be more than 0")
                             is_first_line = False
                             continue
                         else:
-                            raise ParsingError("First line must be nb_drones.")
+                            raise ParsingError("First line must be nb_drone.")
                     except Exception as e:
                         raise ParsingError(
-                            f"nb_drones has to be a number, dummy! ({e})")
+                            f"nb_drone has to be a number, dummy! ({e})")
                 if (clean_line.startswith("hub")
                     or clean_line.startswith("start_hub")
                         or clean_line.startswith("end_hub")):
@@ -83,9 +83,9 @@ class MapParser:
 
         for zone in raw_zones:
             metadata = {'zone': 'normal',
-                    'color': 'white',
-                    'max_drones': '1',
-                    'max_link_capacity': '1'}
+                        'color': 'white',
+                        'max_drones': '1',
+                        'max_link_capacity': '1'}
             if '[' in zone:
                 metadata = MapParser.parse_metadata(zone.split('[', 1)[1],
                                                     metadata)
@@ -96,8 +96,10 @@ class MapParser:
                     raise ParsingError("Hub creation must follow the rules: "
                                        "hub: <name> <x> <y>")
                 name = data[1]
+                x: Union[int, str] = ""
+                y: Union[int, str] = ""
                 (x, y) = (data[2], data[3])
-                hub_type = ("start_hub" if zone.startswith("starthub") 
+                hub_type = ("start_hub" if zone.startswith("starthub")
                             else "end_hub" if zone.startswith("end_hub")
                             else "default")
                 if ' ' in name or '-' in name:
@@ -145,5 +147,4 @@ class MapParser:
                 zone_a=zone_a,
                 zone_b=zone_b,
                 max_capacity=int(metadata['max_link_capacity'])))
-        return (nb_drones, graph)
-
+        return (nb_drone, graph)

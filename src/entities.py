@@ -1,6 +1,5 @@
 from enum import Enum
-from pydantic import BaseModel, Field
-from typing import Optional
+from pydantic import BaseModel
 
 
 class ZoneType(Enum):
@@ -32,29 +31,29 @@ class Graph:
         # zones = {zone_name: zone_object}
         self.zones: dict[str, Zone] = {}
         # adj_list = {zone_name: [list of connections objects linked to it]}
-        self.connections_list: dict[str, list[Connection]] = {}
+        self.connections: dict[str, list[Connection]] = {}
         # start and end zone
-        self.start_hub: Optional[Zone] = None
-        self.end_hub: Optional[Zone] = None
+        self.start_hub: Zone
+        self.end_hub: Zone
 
     def __str__(self) -> str:
-        return f"Zones: {self.zones}\n\nConnections: {self.connections_list}\n"
+        return f"Zones: {self.zones}\n\nConnections: {self.connections}\n"
 
     def add_zone(self, zone: Zone) -> None:
         self.zones[zone.name] = zone
-        self.connections_list[zone.name] = []
+        self.connections[zone.name] = []
         if zone.hub_type == 'start_hub':
             self.start_hub = zone
         if zone.hub_type == 'end_hub':
             self.end_hub = zone
 
     def add_connection(self, connection: Connection) -> None:
-        self.connections_list[connection.zone_a].append(connection)
-        self.connections_list[connection.zone_b].append(connection)
+        self.connections[connection.zone_a].append(connection)
+        self.connections[connection.zone_b].append(connection)
 
     def get_neighbours(self, zone: str) -> list[str]:
         neighbours: list[str] = []
-        for connection in self.connections_list.get(zone, []):
+        for connection in self.connections.get(zone, []):
             neighbour_name = (connection.zone_b if connection.zone_a == zone
                               else connection.zone_a)
             if self.zones[neighbour_name].zone_type != ZoneType.BLOCKED:
