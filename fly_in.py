@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 from src import MapParser, DroneRouter
 
@@ -13,7 +14,8 @@ def flyin() -> None:
 
         nb_drones, graph = parser.parse(sys.argv[1])
 
-        drone_router = DroneRouter()
+        drone_router = DroneRouter(nb_drones, graph)
+        drone_router.plan_routes()
 
     except Exception as e:
         print("Error:", e)

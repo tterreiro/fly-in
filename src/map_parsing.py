@@ -41,7 +41,7 @@ class MapParser:
         return metadata
 
     @staticmethod
-    def parse(input_file: str) -> tuple[int | str, Graph]:  # (nb_drone, graph)
+    def parse(input_file: str) -> tuple[int, Graph]:  # (nb_drone, graph)
         """Parse configuration file and validate map settings."""
         graph = Graph()
         raw_zones: list[str] = []
@@ -99,7 +99,7 @@ class MapParser:
                 x: Union[int, str] = ""
                 y: Union[int, str] = ""
                 (x, y) = (data[2], data[3])
-                hub_type = ("start_hub" if zone.startswith("starthub")
+                hub_type = ("start_hub" if zone.startswith("start_hub")
                             else "end_hub" if zone.startswith("end_hub")
                             else "default")
                 if ' ' in name or '-' in name:
