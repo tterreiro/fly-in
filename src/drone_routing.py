@@ -1,4 +1,4 @@
-from src import Graph, Zone, Connection, ZoneType
+from src import Graph, Zone
 from typing import Any
 from heapq import heappop, heappush
 
@@ -39,16 +39,23 @@ class DroneRouter:
         pq = []
         #  (turn, zone_name, list[zones drone has travelled (zone_name, turn)])
         heappush(pq, (0, start.name, [(start.name, 0)]))
-        visited: set = set()
+        visited: set[tuple[str, int]] = set()
+        max_limited_turns = 200
         while pq:
             current_turn, current_zone, history = heappop(pq)
 
             if current_zone == end.name:
                 return history
 
-            if (current_zone, current_turn) in visited:
+            # limit the max turns possible to prevent infinite loops
+            if current_turn > max_limited_turns:
                 continue
-            visited.add((current_zone, current_turn))
+
+            state = (current_zone, current_turn)
+            if state in visited:
+                continue
+            visited.add(state)
+
             for connection in self.graph.connections.get(current_zone, []):
                 # see which side of connection is neighbour
                 neighbour_name = (connection.zone_b
@@ -57,6 +64,8 @@ class DroneRouter:
                 neighbour_zone = self.graph.zones[neighbour_name]
 
                 # calculate arrival time
+                if neighbour_zone.zone_type == "blocked":
+                    continue
                 if neighbour_zone.zone_type == "restricted":
                     arrival_time = current_turn + 2
                 else:

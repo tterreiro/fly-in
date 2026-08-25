@@ -82,9 +82,12 @@ class MapParser:
                         f"{line_num} ({clean_line})")
 
         for zone in raw_zones:
+            is_start_or_end = (zone.startswith("start_hub") or
+                               zone.startswith("end_hub"))
+            default_capacity = str(nb_drone) if is_start_or_end else "1"
             metadata = {'zone': 'normal',
                         'color': 'white',
-                        'max_drones': '1',
+                        'max_drones': default_capacity,
                         'max_link_capacity': '1'}
             if '[' in zone:
                 metadata = MapParser.parse_metadata(zone.split('[', 1)[1],
@@ -116,7 +119,6 @@ class MapParser:
                 zone_names.append(name)
                 if zone.startswith("start_hub"):
                     nb_start_hub += 1
-                elif zone.startswith("end_hub"):
                     nb_end_hub += 1
                 graph.add_zone(Zone(
                         name=name,
