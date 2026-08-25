@@ -1,6 +1,6 @@
 import os
 from typing import Optional
-import pygame  # type: ignore
+import pygame #type: ignore
 from src import DroneRouter, Graph, MapParser
 
 
@@ -91,33 +91,32 @@ class GraphViz:
     def _get_drone_state_at_turn(
         path: list[tuple[str, int]],
         turn: int
-    ) -> tuple[str, str, int]:
-        """Returns (current_hub, next_hub, arrival_turn)."""
+    ) -> tuple[Optional[str], Optional[tuple[str, str]], str, int]:
+        """
+        Returns:
+            (hub_loc, link_loc, next_dest, arrival_turn)
+        """
         if not path:
-            return ("", "", 0)
-        if turn <= path[0][1]:
-            nxt = path[1][0] if len(path) > 1 else path[0][0]
-            nxt_t = path[1][1] if len(path) > 1 else path[0][1]
-            return (path[0][0], nxt, nxt_t)
+            return (None, None, "NONE", 0)
+
+        if turn < path[0][1]:
+            nxt_hub = path[1][0] if len(path) > 1 else path[0][0]
+            arr_t = path[1][1] if len(path) > 1 else path[0][1]
+            return (path[0][0], None, nxt_hub, arr_t)
+
         if turn >= path[-1][1]:
-            return (path[-1][0], "ARRIVED", path[-1][1])
+            return (path[-1][0], None, "ARRIVED", path[-1][1])
 
-        curr_loc = path[0][0]
-        curr_idx = 0
-        for idx, (name, t) in enumerate(path):
-            if t <= turn:
-                curr_loc = name
-                curr_idx = idx
-            else:
-                break
+        for idx in range(len(path) - 1):
+            curr_hub, curr_t = path[idx]
+            next_hub, next_t = path[idx + 1]
 
-        if curr_idx + 1 < len(path):
-            nxt_loc = path[curr_idx + 1][0]
-            nxt_turn = path[curr_idx + 1][1]
-        else:
-            nxt_loc = curr_loc
-            nxt_turn = turn
-        return (curr_loc, nxt_loc, nxt_turn)
+            if curr_t <= turn < next_t:
+                if next_t - curr_t > 1 and turn > curr_t:
+                    return (None, (curr_hub, next_hub), next_hub, next_t)
+                return (curr_hub, None, next_hub, next_t)
+
+        return (path[-1][0], None, "ARRIVED", path[-1][1])
 
     @classmethod
     def render(cls) -> None:
@@ -189,11 +188,7 @@ class GraphViz:
                                 router.plan_routes()
 
                                 graph = p_graph
-                                raw_paths = router.flees_path
-                                drones_paths = {
-                                    k: [tuple(step) for step in v]
-                                    for k, v in raw_paths.items()
-                                }
+                                drones_paths = router.flees_path
                                 if drones_paths:
                                     max_turns = max(
                                         p[-1][1] for p in drones_paths.values()
@@ -264,21 +259,29 @@ class GraphViz:
                 hub_occupancy: dict[str, list[str]] = {
                     name: [] for name in graph.zones
                 }
+                link_occupancy: dict[tuple[str, str], list[str]] = {}
                 drone_info: dict[str, tuple[str, str, int]] = {}
                 link_usage: dict[tuple[str, str], int] = {}
 
                 for drone_id, path in drones_paths.items():
-                    curr_loc, nxt_loc, arr_t = cls._get_drone_state_at_turn(
-                        path, current_turn
+                    hub_loc, link_loc, nxt_dest, arr_t = (
+                        cls._get_drone_state_at_turn(path, current_turn)
                     )
-                    drone_info[drone_id] = (curr_loc, nxt_loc, arr_t)
-                    if curr_loc in hub_occupancy:
-                        hub_occupancy[curr_loc].append(drone_id)
 
-                    if curr_loc != nxt_loc and nxt_loc != "ARRIVED":
-                        low = min(curr_loc, nxt_loc)
-                        high = max(curr_loc, nxt_loc)
-                        link_key: tuple[str, str] = (low, high)
+                    if hub_loc is not None:
+                        hub_occupancy[hub_loc].append(drone_id)
+                        drone_info[drone_id] = (hub_loc, nxt_dest, arr_t)
+                    elif link_loc is not None:
+                        u, v = link_loc
+                        link_key = (min(u, v), max(u, v))
+                        if link_key not in link_occupancy:
+                            link_occupancy[link_key] = []
+                        link_occupancy[link_key].append(drone_id)
+                        drone_info[drone_id] = (
+                            f"{u}->{v}", nxt_dest, arr_t
+                        )
+                        # only increase nb of drones in link when a drone is
+                        # ACTUALLY in the link
                         link_usage[link_key] = (
                             link_usage.get(link_key, 0) + 1
                         )
@@ -350,6 +353,17 @@ class GraphViz:
                          pos[1] - radius - 18)
                     )
 
+                    if debug_mode:
+                        ztype_str = f"[{zone.zone_type}]"
+                        ztype_surf = font_debug.render(
+                            ztype_str, True, (40, 50, 60)
+                        )
+                        screen.blit(
+                            ztype_surf,
+                            (pos[0] - ztype_surf.get_width() // 2,
+                             pos[1] - radius - 32)
+                        )
+
                     cap_surf = font_small.render(
                         f"{occ_count}/{zone.max_drones}", True, (20, 20, 20)
                     )
@@ -377,6 +391,38 @@ class GraphViz:
                         else:
                             pygame.draw.circle(
                                 screen, (255, 230, 0), (dx, dy), 6
+                            )
+
+                        short_id = d_id.replace("drone_", "D")
+                        d_lbl = font_debug.render(short_id, True, (0, 0, 0))
+                        screen.blit(
+                            d_lbl,
+                            (dx - d_lbl.get_width() // 2, dy + 22)
+                        )
+
+                for (u, v), drones in link_occupancy.items():
+                    if not drones:
+                        continue
+                    p1 = node_pos[u]
+                    p2 = node_pos[v]
+                    mid_x = (p1[0] + p2[0]) // 2
+                    mid_y = (p1[1] + p2[1]) // 2
+                    count = len(drones)
+
+                    for idx, d_id in enumerate(drones):
+                        offset_x = (idx - (count - 1) / 2) * 42
+                        dx = int(mid_x + offset_x)
+                        # Offset below connection to avoid covering node labels
+                        dy = mid_y + 15
+
+                        if drone_sprite:
+                            screen.blit(
+                                drone_sprite,
+                                (dx - drone_sprite.get_width() // 2, dy)
+                            )
+                        else:
+                            pygame.draw.circle(
+                                screen, (255, 140, 0), (dx, dy), 6
                             )
 
                         short_id = d_id.replace("drone_", "D")
@@ -429,6 +475,9 @@ class GraphViz:
                         if nxt == "ARRIVED":
                             line = f"{d_id}: AT {curr} (DONE)"
                             col = (100, 255, 100)
+                        elif "->" in curr:
+                            line = f"{d_id}: TRANSIT {curr} (T:{arr_t})"
+                            col = (255, 170, 50)
                         elif curr == nxt:
                             line = f"{d_id}: WAIT @ {curr}"
                             col = (255, 200, 100)
