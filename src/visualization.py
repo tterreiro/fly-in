@@ -1,5 +1,6 @@
 import os
-import pygame
+from typing import Optional
+import pygame  # type: ignore
 from src import DroneRouter, Graph, MapParser
 
 
@@ -18,7 +19,7 @@ class GraphViz:
 
     @staticmethod
     def _find_map_files(maps_dir: str = "maps") -> list[str]:
-        map_files = []
+        map_files: list[str] = []
         if not os.path.exists(maps_dir):
             return map_files
         for root, _, files in os.walk(maps_dir):
@@ -46,7 +47,7 @@ class GraphViz:
         usable_w = width - 2 * margin
         usable_h = height - 2 * margin
 
-        screen_pos = {}
+        screen_pos: dict[str, tuple[int, int]] = {}
         for name, zone in graph.zones.items():
             if span_x == 0:
                 px = width // 2
@@ -66,7 +67,7 @@ class GraphViz:
 
     @staticmethod
     def _parse_colour(col_str: str) -> tuple[int, int, int]:
-        color_map = {
+        color_map: dict[str, tuple[int, int, int]] = {
             "green": (46, 204, 113),
             "red": (231, 76, 60),
             "blue": (52, 152, 219),
@@ -131,12 +132,12 @@ class GraphViz:
         font_small = pygame.font.SysFont("Arial", 13, bold=True)
         font_debug = pygame.font.SysFont("Consolas", 12)
 
-        bg_img = None
+        bg_img: Optional[pygame.Surface] = None
         if os.path.exists(cls.SKY_BACKGROUND_PATH):
             bg_img = pygame.image.load(cls.SKY_BACKGROUND_PATH).convert()
             bg_img = pygame.transform.scale(bg_img, (screen_w, screen_h))
 
-        drone_sprite = None
+        drone_sprite: Optional[pygame.Surface] = None
         if os.path.exists(cls.DRONE_ASSET_PATH):
             raw_drone = pygame.image.load(cls.DRONE_ASSET_PATH).convert_alpha()
             drone_w = 36
@@ -150,11 +151,11 @@ class GraphViz:
         selected_index = 0
         debug_mode = False
 
-        graph = None
-        drones_paths = {}
+        graph: Optional[Graph] = None
+        drones_paths: dict[str, list[tuple[str, int]]] = {}
         max_turns = 0
         current_turn = 0
-        node_pos = {}
+        node_pos: dict[str, tuple[int, int]] = {}
         error_msg = ""
 
         running = True
@@ -188,7 +189,11 @@ class GraphViz:
                                 router.plan_routes()
 
                                 graph = p_graph
-                                drones_paths = router.flees_path
+                                raw_paths = router.flees_path
+                                drones_paths = {
+                                    k: [tuple(step) for step in v]
+                                    for k, v in raw_paths.items()
+                                }
                                 if drones_paths:
                                     max_turns = max(
                                         p[-1][1] for p in drones_paths.values()
@@ -271,15 +276,18 @@ class GraphViz:
                         hub_occupancy[curr_loc].append(drone_id)
 
                     if curr_loc != nxt_loc and nxt_loc != "ARRIVED":
-                        link_key = tuple(sorted([curr_loc, nxt_loc]))
+                        low = min(curr_loc, nxt_loc)
+                        high = max(curr_loc, nxt_loc)
+                        link_key: tuple[str, str] = (low, high)
                         link_usage[link_key] = (
                             link_usage.get(link_key, 0) + 1
                         )
 
-                drawn_links = set()
+                drawn_links: set[tuple[str, str]] = set()
                 for zone_name, conns in graph.connections.items():
                     for conn in conns:
-                        pair = tuple(sorted([conn.zone_a, conn.zone_b]))
+                        pair = (min(conn.zone_a, conn.zone_b),
+                                max(conn.zone_a, conn.zone_b))
                         if pair not in drawn_links:
                             drawn_links.add(pair)
                             p1 = node_pos[conn.zone_a]

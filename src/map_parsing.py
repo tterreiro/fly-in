@@ -50,7 +50,7 @@ class MapParser:
         is_first_line = True
         nb_start_hub = 0
         nb_end_hub = 0
-        nb_drone: Union[int, str] = 1
+        nb_drone: int = 1
         with open(input_file, "r") as f:
             for line_num, line in enumerate(f, 1):
                 clean_line = line.split('#')[0].strip().lower()

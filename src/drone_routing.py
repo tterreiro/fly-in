@@ -36,7 +36,7 @@ class DroneRouter:
         print(self.flees_path)
 
     def path_finder(self, start: Zone, end: Zone) -> list[tuple[str, int]]:
-        pq = []
+        pq: list[tuple[int, str, list[tuple[str, int]]]] = []
         #  (turn, zone_name, list[zones drone has travelled (zone_name, turn)])
         heappush(pq, (0, start.name, [(start.name, 0)]))
         visited: set[tuple[str, int]] = set()
