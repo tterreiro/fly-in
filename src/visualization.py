@@ -1,6 +1,6 @@
 import os
 from typing import Optional
-import pygame #type: ignore
+import pygame  # type: ignore
 from src import DroneRouter, Graph, MapParser
 
 
