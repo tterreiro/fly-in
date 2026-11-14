@@ -20,7 +20,8 @@ class DroneRouter:
         self.zone_reserves: dict[tuple[str, int], int] = {}
         # (connection_id, turn_number):nb_drones occupying
         self.link_reserves: dict[tuple[str, int], int] = {}
-        self.flees_path: dict[str, list] = {}  # {drone_id: [path_sequence]}
+        # {drone_id: [path_sequence]}
+        self.flees_path: dict[str, list[tuple[str, int]]] = {}
 
     def plan_routes(self) -> None:
         start_hub = self.graph.start_hub

@@ -20,6 +20,6 @@ lint:
 
 lint-strict:
 	flake8 .
-	mypy . --strict
+	mypy . --strict --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
 
 .PHONY: install run debug clean lint lint-strict

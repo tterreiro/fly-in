@@ -56,6 +56,6 @@ class Graph:
         for connection in self.connections.get(zone, []):
             neighbour_name = (connection.zone_b if connection.zone_a == zone
                               else connection.zone_a)
-            if self.zones[neighbour_name].zone_type != ZoneType.BLOCKED:
+            if self.zones[neighbour_name].zone_type != ZoneType.BLOCKED.value:
                 neighbours.append(neighbour_name)
         return neighbours
