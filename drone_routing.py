@@ -62,6 +62,7 @@ class DroneRouter:
         if not self.flees_path:
             return
 
+        # {turn: drone moevments}
         turn_moves: dict[int, list[str]] = {}
         max_turns = 0
 

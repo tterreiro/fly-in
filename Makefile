@@ -1,6 +1,6 @@
 
 install:
-	uv sync
+	uv sync --python 3.12
 
 run: install
 	uv run python fly_in.py $(ARGS)
