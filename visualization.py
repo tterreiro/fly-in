@@ -1,24 +1,41 @@
 import os
 from typing import Optional
 import pygame
-from src import DroneRouter, Graph, MapParser
+from entities import Graph
+from drone_routing import DroneRouter
+from map_parsing import MapParser
 
 
 class RenderingError(Exception):
+    """
+    Exception raised for errors during graphics rendering or map loading.
+    """
     def __init__(self, msg: str) -> None:
+        """Initialize the rendering error with a failure message.
+        Args:
+            msg: Descriptive explanation of the rendering failure.
+        """
         self.msg = msg
         super().__init__(msg)
 
     def __str__(self) -> str:
+        """Return a formatted error string."""
         return f"Failed to load/route:: {self.msg}"
 
 
 class GraphViz:
-    SKY_BACKGROUND_PATH = os.path.join("assets", "skybackground.jpg")
-    DRONE_ASSET_PATH = os.path.join("assets", "airplane_kamikaze.png")
+    """Interactive Pygame visualizer for drone networks and movements."""
+    SKY_BACKGROUND_PATH = os.path.join("skybackground.jpg")
+    DRONE_ASSET_PATH = os.path.join("airplane.png")
 
     @staticmethod
     def _find_map_files(maps_dir: str = "maps") -> list[str]:
+        """Discover and collect all map configuration text files.
+        Args:
+            maps_dir: Root directory path to search for map files.
+        Returns:
+            list[str]: Sorted file paths of discovered map files.
+        """
         map_files: list[str] = []
         if not os.path.exists(maps_dir):
             return map_files
@@ -35,6 +52,16 @@ class GraphViz:
         height: int,
         margin: int = 140
     ) -> dict[str, tuple[int, int]]:
+        """Scale and project zone coordinates onto 2D screen pixels.
+        Args:
+            graph: The network Graph containing zones with coordinates.
+            width: Available screen width in pixels.
+            height: Available screen height in pixels.
+            margin: Border padding in pixels around the display area.
+        Returns:
+            dict[str, tuple[int, int]]: Mapping of zone names to
+                                        (x, y) pixels.
+        """
         xs = [zone.x for zone in graph.zones.values()]
         ys = [zone.y for zone in graph.zones.values()]
 
@@ -67,6 +94,13 @@ class GraphViz:
 
     @staticmethod
     def _parse_colour(col_str: str) -> tuple[int, int, int]:
+        """
+        Convert a color name string into its corresponding RGB tuple.
+        Args:
+            col_str: Color name string (e.g. 'green', 'red', 'blue').
+        Returns:
+            tuple[int, int, int]: RGB color tuple (r, g, b).
+        """
         color_map: dict[str, tuple[int, int, int]] = {
             "green": (46, 204, 113),
             "red": (231, 76, 60),
@@ -93,8 +127,13 @@ class GraphViz:
         turn: int
     ) -> tuple[Optional[str], Optional[tuple[str, str]], str, int]:
         """
+        Determine a drone's spatial position and status at a specific turn.
+        Args:
+            path: Chronological list of (zone_name, turn) states for a drone.
+            turn: Current simulation turn number being rendered.
         Returns:
-            (hub_loc, link_loc, next_dest, arrival_turn)
+            tuple[Optional[str], Optional[tuple[str, str]], str, int]:
+                (hub_location, link_endpoints, next_destination, arrival_turn)
         """
         if not path:
             return (None, None, "NONE", 0)
@@ -120,6 +159,12 @@ class GraphViz:
 
     @classmethod
     def render(cls) -> None:
+        """Initialize the Pygame window and run the interactive event loop.
+        Supports browsing map files, stepping through simulation turns with
+        arrow keys, toggling debug overlays, and visualizing live occupancy.
+        Raises:
+            RenderingError: If map parsing or path planning fails during load.
+        """
         pygame.init()
         screen_w, screen_h = 1600, 1000
         screen = pygame.display.set_mode((screen_w, screen_h))

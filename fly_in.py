@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 import sys
-from src import MapParser, DroneRouter, GraphViz
+from map_parsing import MapParser
+from drone_routing import DroneRouter
 
 
-def flyin() -> None:
+def fly_in() -> None:
     """Main entry point for the map parsing, drone routing and displaying"""
     try:
         if len(sys.argv) == 1:
+            from visualization import GraphViz
             GraphViz.render()
         elif len(sys.argv) == 2:
             parser = MapParser()
@@ -20,4 +22,4 @@ def flyin() -> None:
 
 
 if __name__ == "__main__":
-    flyin()
+    fly_in()

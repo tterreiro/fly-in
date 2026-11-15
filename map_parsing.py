@@ -2,23 +2,42 @@
 
 # ---- FINISH METADATA CHECKING ---
 
-from src import Graph, ZoneType, Zone, Connection
+from entities import Graph, ZoneType, Zone, Connection
 from typing import Union
 
 
 class ParsingError(Exception):
+    """Exception raised when configuration file parsing or syntax fails."""
     def __init__(self, msg: str) -> None:
+        """Initialize the parsing error with a descriptive message.
+        Args:
+            msg: Explanation of what caused the parsing failure.
+        """
         self.msg = msg
         super().__init__(msg)
 
     def __str__(self) -> str:
+        """Returns a formatted error string."""
         return f"ParsingError: {self.msg}"
 
 
 class MapParser:
+    """Parser responsible for reading, validating, and building map graphs."""
     @staticmethod
     def parse_metadata(meta_string: str,
                        metadata: dict[str, str]) -> dict[str, str]:
+        """
+        Extract and validate key-value metadata from bracketed text.
+        Args:
+            meta_string: Content inside square brackets
+                            (e.g. 'zone=normal color=blue').
+            metadata: Base metadata dictionary to update.
+        Returns:
+            dict[str, str]: Updated dictionary
+                            with parsed metadata key-values.
+        Raises:
+            ParsingError: If any metadata key or value violates constraints.
+        """
         tokens = meta_string.replace('[', '').replace(']', '').split()
         for token in tokens:
             if '=' in token:
@@ -42,7 +61,17 @@ class MapParser:
 
     @staticmethod
     def parse(input_file: str) -> tuple[int, Graph]:  # (nb_drone, graph)
-        """Parse configuration file and validate map settings."""
+        """
+        Parse configuration file and build the verified Graph instance.
+        Args:
+            input_file: Filepath of the map text configuration to parse.
+        Returns:
+            tuple[int, Graph]: The drone fleet count
+                               and constructed network Graph.
+        Raises:
+            ParsingError: If map syntax, hubs, coordinates,
+                          or connections are invalid.
+        """
         graph = Graph()
         raw_zones: list[str] = []
         raw_connections: list[str] = []
@@ -51,8 +80,8 @@ class MapParser:
         nb_start_hub = 0
         nb_end_hub = 0
         nb_drone: int = 1
-        with open(input_file, "r") as f:
-            for line_num, line in enumerate(f, 1):
+        with open(input_file, "r") as file:
+            for line_num, line in enumerate(file, 1):
                 clean_line = line.split('#')[0].strip().lower()
                 if not clean_line:
                     continue
@@ -117,8 +146,9 @@ class MapParser:
                     raise ParsingError("Zones coordinates must be numbers!"
                                        f" ({x}, {y})")
                 zone_names.append(name)
-                if zone.startswith("start_hub"):
+                if hub_type == "start_hub":
                     nb_start_hub += 1
+                elif hub_type == "end_hub":
                     nb_end_hub += 1
                 graph.add_zone(Zone(
                         name=name,
@@ -131,6 +161,8 @@ class MapParser:
         if nb_start_hub != 1 or nb_end_hub != 1:
             raise ParsingError("There must be exactly "
                                "one start and one end hub")
+
+        seen_connections: set[tuple[str, str]] = set()
         for connection in raw_connections:
             metadata = {"max_link_capacity": '1'}
             if '[' in connection:
@@ -138,13 +170,26 @@ class MapParser:
                     connection.split('[', 1)[1],
                     metadata)
                 connection = connection.split('[', 1)[0].strip()
+
             # connected zones = [zone_a, zone_b]
             connected_zones: list[str] = connection.split()[1].split('-')
+            if len(connected_zones) != 2:
+                raise ParsingError(
+                    "Connection format must be: connection: <zone1>-<zone2>")
             zone_a = connected_zones[0]
             zone_b = connected_zones[1]
             if zone_a not in zone_names or zone_b not in zone_names:
                 raise ParsingError("Connections must happen "
                                    f"between existing zones ({zone_names})")
+            if zone_a == zone_b:
+                raise ParsingError(
+                    f"Self-connecting zones are not allowed: {zone_a}")
+
+            edge_key = (min(zone_a, zone_b), max(zone_a, zone_b))
+            if edge_key in seen_connections:
+                raise ParsingError(f"Duplicate connection: {zone_a}-{zone_b}")
+            seen_connections.add(edge_key)
+
             graph.add_connection(Connection(
                 zone_a=zone_a,
                 zone_b=zone_b,
